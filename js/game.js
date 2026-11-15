@@ -48,7 +48,7 @@ function planTurn(state, choice) {
   if (water < 0) failed = "La reserva de agua no alcanzó para completar el turno.";
   else if (food < 0) failed = "La reserva de alimentos no alcanzó para completar el turno.";
 
-  return { deficit, harvest, dose, next: { day: nextDay, battery, water, food, growth, shield, exposure, dust, failed } };
+  return { solar, demand, deficit, harvest, dose, next: { day: nextDay, battery, water, food, growth, shield, exposure, dust, failed } };
 }
 
 const carePlans = [
@@ -169,6 +169,58 @@ function startGame() {
     return plansForDay(state.day)[choices.querySelector("input:checked")?.value];
   }
 
+  function showResourcePreview(plan) {
+    const panel = byId("resource-preview");
+    panel.hidden = !plan?.next;
+    if (panel.hidden) return;
+    const next = plan.next;
+    const charged = next.battery - state.battery;
+    const batteryChange = charged > 0 ? "Cargás +" + charged : charged < 0 ? "Usás −" + plan.deficit : "Sin cambio";
+    const resources = [
+      ["Batería", "battery", state.battery, next.battery, state.battery, next.battery, batteryChange,
+        "El Sol aporta " + plan.solar + " · El plan usa " + plan.demand + " de energía"],
+      ["Agua", "water", state.water, next.water, state.water, Math.max(0, next.water),
+        "Usás −" + (state.water - next.water), ""],
+      ["Comida", "food", state.food, next.food, foodFrame(state.food), foodFrame(next.food),
+        plan.harvest ? "Comen −2 · Cosechás +3" : "Comen −2 porciones", ""]
+    ];
+    const cards = resources.map(([label, art, before, after, beforeFrame, afterFrame, change, detail]) => {
+      const card = document.createElement("div");
+      card.className = "preview-card";
+      const title = document.createElement("strong");
+      title.textContent = label;
+      const comparison = document.createElement("div");
+      comparison.className = "preview-comparison";
+      for (const [caption, value, frame] of [["Ahora", before, beforeFrame], ["Te queda", after, afterFrame]]) {
+        const step = document.createElement("div");
+        const name = document.createElement("span");
+        name.textContent = caption;
+        const amount = document.createElement("strong");
+        amount.textContent = value < 0 ? "0 (falta " + Math.abs(value) + ")" : value;
+        step.append(name, sprite(art, frame), amount);
+        if (caption === "Te queda") {
+          const arrow = document.createElement("span");
+          arrow.setAttribute("aria-hidden", "true");
+          arrow.textContent = "→";
+          comparison.append(arrow);
+        }
+        comparison.append(step);
+      }
+      const effect = document.createElement("p");
+      effect.className = "preview-effect";
+      effect.textContent = change;
+      card.append(title, comparison, effect);
+      if (detail) {
+        const explanation = document.createElement("p");
+        explanation.className = "preview-detail";
+        explanation.textContent = detail;
+        card.append(explanation);
+      }
+      return card;
+    });
+    byId("preview-cards").replaceChildren(...cards);
+  }
+
   function showPreview() {
     const choice = selectedChoice();
     byId("advance").disabled = !choice;
@@ -177,15 +229,18 @@ function startGame() {
       alertActions.children[1].setAttribute("aria-pressed", String(choice?.crew === "maintenance"));
     }
     if (!choice) {
+      showResourcePreview();
       byId("preview").textContent = "Tocá una opción para ver qué cambiaría.";
       byId("preview").classList.remove("warning");
       return;
     }
     const plan = planTurn(state, choice);
     byId("advance").disabled = Boolean(plan.error);
-    const text = plan.error || (plan.next.failed
-      ? plan.next.failed
-      : `Te quedarían ${plan.next.battery} de batería, ${plan.next.water} de agua y ${plan.next.food} porciones de comida.${plan.harvest ? " ¡La lechuga estará lista!" : ""}${days[state.day][3] ? ` Radiación recibida: ${plan.dose} puntos.` : ""}`);
+    showResourcePreview(plan);
+    const text = plan.error || plan.next.failed || [
+      plan.harvest ? "¡La lechuga estará lista!" : "",
+      days[state.day][3] ? "Radiación que recibirías: " + plan.dose + " puntos." : ""
+    ].filter(Boolean).join(" ");
     byId("preview").textContent = text;
     byId("preview").classList.toggle("warning", Boolean(plan.error || plan.next?.failed));
   }
@@ -242,6 +297,7 @@ function startGame() {
     }
 
     if (finished) {
+      showResourcePreview();
       byId("preview").textContent = "";
       byId("outcome-title").textContent = state.failed ? "Misión interrumpida" : "Misión cumplida";
       byId("outcome-detail").textContent = state.failed

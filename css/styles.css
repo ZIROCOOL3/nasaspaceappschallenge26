@@ -192,3 +192,22 @@ button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px #bc
 .object-action { display: grid; justify-items: center; gap: 4px; margin: 0; min-width: 0; color: #fff5e5; background: #303b63; border: 2px solid #8298cf; box-shadow: none; touch-action: pan-y; }
 .object-action[aria-pressed="true"] { border-color: #ffd27a; background: #424e76; }
 .object-action .sprite { width: clamp(64px, 16vw, 112px); }
+
+.resource-preview { margin-top: 16px; }
+.resource-preview h3 { margin-bottom: 8px; font-size: 1.1rem; }
+.preview-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.preview-card { padding: 10px; border: 1px solid #697cae; border-radius: 10px; background: #19213d; }
+.preview-comparison { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; margin: 6px 0; text-align: center; }
+.preview-comparison div { display: grid; justify-items: center; gap: 2px; }
+.preview-comparison div > span:first-child { color: var(--muted); font-size: .75rem; }
+.preview-comparison > span { color: var(--accent); font-weight: 750; }
+.preview-comparison .sprite { width: 42px; }
+.preview-comparison strong { color: #fff5e5; font-size: 1.05rem; }
+.preview-effect { color: var(--accent); font-size: .87rem; font-weight: 700; }
+.preview-detail { color: var(--muted); font-size: .77rem; margin-top: 4px; }
+.preview:empty { display: none; }
+@media (max-width: 510px) {
+  .preview-cards { grid-template-columns: 1fr; }
+  .preview-card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr); align-items: center; gap: 3px 8px; }
+  .preview-comparison { grid-column: 2; grid-row: 1 / span 3; margin: 0; }
+}
