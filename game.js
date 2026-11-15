@@ -106,9 +106,9 @@ function startGame() {
   function render() {
     const finished = Boolean(state.failed) || state.day === days.length;
     const stats = [
-      ["ϟ", "Energía", `Batería: ${state.battery} de ${batteryCapacity}`, "Los paneles cargan la batería."],
-      ["◉", "Agua y comida", `${Math.max(0, state.water)} de agua · ${Math.max(0, state.food)} porciones`, state.growth === harvestTarget ? "¡Lechuga cosechada!" : `Luz para las plantas: ${state.growth} de ${harvestTarget} días`],
-      ["⬡", "Refugio", `Protección: nivel ${state.shield}`, `Radiación recibida: ${state.exposure} puntos`]
+      ["🔋", "Energía", `Batería: ${state.battery} de ${batteryCapacity}`, "Los paneles cargan la batería."],
+      ["💧", "Agua y comida", `${Math.max(0, state.water)} de agua · ${Math.max(0, state.food)} porciones`, state.growth === harvestTarget ? "¡Lechuga cosechada!" : `Luz para las plantas: ${state.growth} de ${harvestTarget} días`],
+      ["🛡️", "Refugio", `Protección: nivel ${state.shield}`, `Radiación recibida: ${state.exposure} puntos`]
     ];
     byId("stats").replaceChildren(...stats.map(([icon, label, value, detail]) => {
       const card = document.createElement("div");
@@ -147,7 +147,10 @@ function startGame() {
     byId("solar").textContent = `☀ ${solarAvailable(state)} de energía solar`;
     byId("event-title").textContent = title;
     byId("event-description").textContent = description;
+    const scene = ["landing", "prepare", "dust", "alert", "sun", "finish"][state.day];
+    document.querySelector("main").dataset.scene = scene;
     byId("brief").classList.toggle("alert", Boolean(event));
+    byId("scene-icon").textContent = ["👩‍🚀", "🛠️", "🌪️", "📡", "🌤️", "🚩"][state.day];
     const source = byId("event-source");
     source.hidden = !event;
     if (event) {
@@ -167,6 +170,16 @@ function startGame() {
       const description = document.createElement("span");
       description.textContent = choice.description;
       copy.append(title, description);
+      const icon = document.createElement("span");
+      icon.className = "plan-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = choice.crew === "shield" ? "🛡️"
+        : choice.crew === "shelter" ? (choice.grow ? "🌱" : "🏠")
+        : event ? "📡"
+        : state.day === 1 ? "🧹"
+        : choice.water === "eco" ? "💧"
+        : choice.grow ? "🌱" : "🔋";
+      title.prepend(icon);
       label.append(input, copy);
       return label;
     }));

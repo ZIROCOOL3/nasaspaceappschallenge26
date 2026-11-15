@@ -74,3 +74,100 @@ summary { cursor: pointer; font-weight: 650; }
   .stats strong { font-size: .86rem; }
   .top { font-size: .76rem; }
 }
+
+:root {
+  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  background: #151a33;
+  color: #fff5e5;
+  --surface: #232a48;
+  --line: #475781;
+  --muted: #d7def3;
+  --accent: #ffd27a;
+}
+.hero {
+  min-height: 365px;
+  background: #242c49;
+  border: 2px solid #e28b60;
+  box-shadow: 0 8px 0 #10162a;
+}
+.mars {
+  inset: 0;
+  width: auto;
+  aspect-ratio: auto;
+  border-radius: 0;
+  opacity: 1;
+  transform: none;
+  box-shadow: none;
+  background: linear-gradient(90deg, #13172ef2, #1419317a 45%, transparent 71%),
+    url("base-marte-ilustracion.png") center 55% / cover;
+}
+.weather {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .45s;
+}
+[data-scene="dust"] .weather {
+  opacity: .65;
+  background: repeating-linear-gradient(-12deg, transparent 0 32px, #ffd3a94d 42px, transparent 57px 89px);
+  background-size: 200% 170%;
+  animation: dust-wind 8s linear infinite;
+}
+[data-scene="alert"] .weather {
+  opacity: .8;
+  background: radial-gradient(ellipse at 90% 6%, #fdf2b898, transparent 46%);
+  animation: sun-glow 2.8s ease-in-out infinite alternate;
+}
+h1 {
+  font-family: "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+  color: #ffe092;
+  font-weight: 950;
+  text-shadow: 0 .055em #7b3736, 0 .09em #131a30;
+}
+h2 { font-size: 1.4rem; }
+.eyebrow, .mission-time span { color: #ffe8ad; }
+.mission-time { background: #17213be8; border-color: #ffe1a0; }
+.stats { margin-block: 20px; }
+.stats div { border-top: 3px solid #ffd27a; }
+.stats div:nth-child(2) { border-top-color: #76ded5; }
+.stats div:nth-child(3) { border-top-color: #d0adff; }
+.symbol { font-size: 1.65rem; }
+.brief, #outcome { background: #343b62; border-color: #ffd27a; }
+.brief.alert { background: #4a3058; border-color: #ffba9e; }
+.brief-heading { display: flex; align-items: center; gap: 10px; }
+.brief h3 { font-size: 1.2rem; }
+#scene-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.1em;
+  height: 2.1em;
+  border-radius: 12px;
+  background: #1e2545;
+  font-size: 1.35rem;
+}
+[data-scene="alert"] #scene-icon { animation: signal 2s ease-in-out infinite; }
+.decisions label { background: #19213d; border: 2px solid #586ca2; transition: background-color .18s, border-color .18s, transform .18s; }
+.decisions label:hover { transform: translateY(-2px); }
+.decisions label:has(:checked) { background: #384665; }
+.decisions label strong { font-size: 1.05rem; }
+.plan-icon { font-size: 1.17em; margin-inline-end: .36em; }
+button { box-shadow: 0 4px #bc7949; transition: transform .15s, box-shadow .15s; }
+button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px #bc7949; }
+@keyframes dust-wind { to { background-position: 120% 100%; } }
+@keyframes sun-glow { from { opacity: .35; } to { opacity: .8; } }
+@keyframes signal { 50% { transform: scale(1.1); } }
+
+@media (max-width: 600px) {
+  .hero { min-height: 395px; align-content: end; }
+  .mars {
+    background-image: linear-gradient(0deg, #151a33 3%, #151a33b8 32%, transparent 70%),
+      url("base-marte-ilustracion.png");
+    background-position: 62% 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .decisions label:hover, button:not(:disabled):active { transform: none; }
+}
