@@ -21,7 +21,7 @@ The game runs locally without a server, an account, or an API key.
 
 - **Power and food.** A dust storm reduces solar power. Keep the greenhouse lights on by drawing from the battery, or save that power and delay the lettuce harvest.
 - **Water recycling.** Use less power by recycling less water. Your stored water runs out faster.
-- **Shelter and communications.** During the solar alert, tap the shelter or swipe over the dusty panel to select a plan. In this scenario, a radio reply from Earth takes 20 minutes. Cleaning the panels helps tomorrow's power supply, while taking shelter reduces the crew's radiation exposure.
+- **Shelter and communications.** During the solar alert, choose whether to take shelter or stay outside to clean the panels. In this scenario, a radio reply from Earth takes 20 minutes. Cleaning the panels helps tomorrow's power supply, while taking shelter reduces the crew's radiation exposure.
 
 ## Science behind the game
 

@@ -29,8 +29,9 @@ function planTurn(state, choice) {
   const solar = solarAvailable(state);
   const demand = (choice.water === "full" ? 6 : 4) + (choice.grow ? 2 : 0);
   const deficit = Math.max(0, demand - solar);
-  if (deficit > (choice.battery ? state.battery : 0)) {
-    return { demand, available: solar + (choice.battery ? state.battery : 0), error: `Necesitás ${demand} de energía y tenés ${solar + (choice.battery ? state.battery : 0)} disponible. Ajustá el consumo o habilitá la batería.` };
+  const available = solar + state.battery;
+  if (demand > available) {
+    return { demand, available, error: `Necesitás ${demand} de energía. El Sol y la batería juntos te dan ${available}.` };
   }
 
   const battery = Math.min(batteryCapacity, state.battery + solar - demand);
@@ -52,9 +53,9 @@ function planTurn(state, choice) {
 }
 
 const carePlans = [
-  { title: "Cuidar las plantas", description: "Encendé las luces y usá la batería si hace falta.", water: "full", grow: true, crew: "maintenance", battery: true },
-  { title: "Guardar energía", description: "Apagá las luces. La cosecha tendrá que esperar.", water: "full", grow: false, crew: "maintenance", battery: true },
-  { title: "Usar más agua", description: "Reutilizá menos agua para que las plantas tengan luz.", water: "eco", grow: true, crew: "maintenance", battery: false }
+  { title: "Cuidar las plantas", description: "Encendé las luces y usá la batería si hace falta.", water: "full", grow: true, crew: "maintenance" },
+  { title: "Guardar energía", description: "Apagá las luces. La cosecha tendrá que esperar.", water: "full", grow: false, crew: "maintenance" },
+  { title: "Usar más agua", description: "Reutilizá menos agua para que las plantas tengan luz.", water: "eco", grow: true, crew: "maintenance" }
 ];
 
 const preparationPlans = [
@@ -63,9 +64,9 @@ const preparationPlans = [
 ];
 
 const alertPlans = [
-  { title: "Entrar al refugio ya", description: "Esperá la respuesta adentro. Ahorrá energía usando más agua y pausando las luces.", water: "eco", grow: false, crew: "shelter", battery: true },
-  { title: "Refugiarse y cuidar las plantas", description: "Entrá ya y usá batería para mantener el agua y las luces.", water: "full", grow: true, crew: "shelter", battery: true },
-  { title: "Esperar afuera y limpiar", description: "Mañana tendrás más energía, pero la tripulación queda expuesta mientras espera la respuesta.", water: "eco", grow: false, crew: "maintenance", battery: true }
+  { title: "Entrar al refugio ya", description: "Esperá la respuesta adentro. Ahorrá energía usando más agua y pausando las luces.", water: "eco", grow: false, crew: "shelter" },
+  { title: "Refugiarse y cuidar las plantas", description: "Entrá ya y usá batería para mantener el agua y las luces.", water: "full", grow: true, crew: "shelter" },
+  { title: "Esperar afuera y limpiar", description: "Mañana tendrás más energía, pero la tripulación queda expuesta mientras espera la respuesta.", water: "eco", grow: false, crew: "maintenance" }
 ];
 
 function plansForDay(day) {
@@ -82,12 +83,13 @@ const sprites = {
   shelter: ["entrar-refugio", 6],
   panel: ["limpiar-panel", 6],
   lettuce: ["crecer-lechuga", 6],
+  savePower: ["luz-invernadero", 6],
   battery: ["bateria-base", 7],
   water: ["tanque-agua", 9],
   food: ["raciones", 4]
 };
 
-function sprite(name, frame = 0, from = frame, loop = false) {
+function sprite(name, frame = 0, from = frame, repeat = false) {
   const [file, frames] = sprites[name];
   const viewport = document.createElement("span");
   viewport.className = "sprite";
@@ -100,14 +102,33 @@ function sprite(name, frame = 0, from = frame, loop = false) {
   const position = (index) => "translateX(" + (-index * 100 / frames) + "%)";
   strip.style.transform = position(frame);
   viewport.append(strip);
-  if ((loop || from !== frame) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    const steps = loop ? frames : Math.abs(frame - from);
-    strip.animate(
-      [{ transform: position(from) }, { transform: position(loop ? frames : frame) }],
-      { duration: loop ? 1800 : Math.max(240, steps * 160), easing: "steps(" + steps + ", end)", iterations: loop ? Infinity : 1 }
-    );
+  const cycle = repeat === "cycle";
+  if ((cycle || from !== frame) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const steps = cycle ? frames : Math.abs(frame - from);
+    const duration = cycle ? 1800 : Math.max(240, steps * 160);
+    const end = position(cycle ? frames : frame);
+    const keyframes = [
+      { transform: position(from), easing: "steps(" + steps + ", end)" },
+      { transform: end, offset: repeat && !cycle ? duration / (duration + 650) : 1 }
+    ];
+    if (repeat && !cycle) keyframes.push({ transform: end, offset: 1 });
+    strip.animate(keyframes, {
+      duration: duration + (repeat && !cycle ? 650 : 0),
+      iterations: repeat ? Infinity : 1
+    });
   }
   return viewport;
+}
+
+function shieldAnimation() {
+  const art = document.createElement("span");
+  art.className = "shield-animation";
+  art.setAttribute("aria-hidden", "true");
+  const shield = document.createElement("span");
+  shield.className = "shield-layer";
+  shield.textContent = "🛡️";
+  art.append(sprite("shelter", 5), shield);
+  return art;
 }
 
 function foodFrame(food) {
@@ -156,7 +177,6 @@ const english = {
   "Tu próxima decisión": "Your next decision",
   "Ver registro en NASA DONKI ↗": "View the NASA DONKI record ↗",
   "Elegí un plan": "Pick a plan",
-  "Objetos de la base": "Base equipment",
   "Si elegís este plan": "If you pick this plan",
   "Hacerlo": "Do it",
   "Lo que pasó": "What happened",
@@ -180,7 +200,6 @@ function startGame() {
   const choices = byId("choices");
   const outcome = byId("outcome");
   let state = newMission();
-  const alertActions = byId("alert-actions");
   const languagePicker = byId("language");
   const history = [];
   let language = "es";
@@ -216,57 +235,57 @@ function startGame() {
   }
 
 
-  function renderAlertActions() {
-    alertActions.replaceChildren();
-    if (state.day !== 3) return;
-    for (const [name, label, planIndex] of [
-      ["shelter", t("Tocá el refugio", "Tap the shelter"), 0],
-      ["panel", t("Deslizá o tocá el panel", "Swipe or tap the panel"), 2]
-    ]) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "object-action";
-      const caption = document.createElement("span");
-      caption.textContent = label;
-      button.append(sprite(name), caption);
-      const select = () => {
-        const input = choices.querySelector('input[value="' + planIndex + '"]');
-        input.checked = true;
-        showPreview();
-      };
-      button.addEventListener("click", select);
-      if (name === "panel") {
-        let start = null;
-        let pointer = null;
-        button.addEventListener("pointerdown", (event) => {
-          if (!event.isPrimary || event.button !== 0) return;
-          start = event.clientX;
-          pointer = event.pointerId;
-          button.setPointerCapture(pointer);
-        });
-        button.addEventListener("pointermove", (event) => {
-          if (pointer !== event.pointerId || start === null || Math.abs(event.clientX - start) < 30) return;
-          start = null;
-          button.querySelector(".sprite").replaceWith(sprite("panel", 3, 0));
-          select();
-        });
-        const clear = () => { start = null; pointer = null; };
-        button.addEventListener("pointerup", clear);
-        button.addEventListener("pointercancel", clear);
-        button.addEventListener("lostpointercapture", clear);
-      }
-      alertActions.append(button);
-    }
-  }
-
   function selectedChoice() {
     return plansForDay(state.day)[choices.querySelector("input:checked")?.value];
   }
 
-  function showResourcePreview(plan) {
+  function showActionPreview(choice, plan) {
+    const preview = byId("action-preview");
+    let art;
+    let message;
+    if (choice.crew === "shield") {
+      art = shieldAnimation();
+      message = t("Protección del refugio: nivel {before} → {after}.",
+        "Shelter protection: level {before} → {after}.", { before: state.shield, after: plan.next.shield });
+    } else if (choice.crew === "shelter") {
+      art = sprite("shelter", 5, 0, true);
+      message = t("La tripulación se refugiaría mientras espera la respuesta.", "The crew would take shelter while waiting for the reply.");
+    } else if (choice === carePlans[1]) {
+      art = sprite("savePower", 5, 0, true);
+      message = plan.next.growth === harvestTarget
+        ? t("Apagarías las luces para ahorrar energía.", "You would turn off the grow lights to save power.")
+        : t("Apagarías las luces para ahorrar energía. La lechuga dejaría de crecer por este sol.",
+        "You would turn off the grow lights to save power. The lettuce would pause growing for this sol.");
+    } else if (state.day === 1 || state.day === 3 || state.dust) {
+      art = sprite("panel", 5, 0, true);
+      message = plan.next.day < days.length
+        ? t("Paneles limpios. Tendrías {energy} de energía solar el próximo sol.", "Clean panels. You would have {energy} solar power next sol.", { energy: solarAvailable(plan.next) })
+        : t("La tripulación limpiaría los paneles.", "The crew would clean the panels.");
+    } else if (plan.next.growth > state.growth) {
+      art = sprite("lettuce", plan.harvest ? 5 : plan.next.growth, state.growth, true);
+      message = plan.harvest
+        ? t("Las luces ayudarían a completar la cosecha.", "The grow lights would get the lettuce ready to harvest.")
+        : t("Las luces sumarían un día de crecimiento.", "The grow lights would add one day of growth.");
+    }
+    preview.hidden = !art;
+    if (!art) {
+      preview.replaceChildren();
+      return;
+    }
+    const text = document.createElement("p");
+    text.textContent = message;
+    preview.replaceChildren(art, text);
+  }
+
+  function showResourcePreview(plan, choice) {
     const panel = byId("resource-preview");
     panel.hidden = !plan?.next;
-    if (panel.hidden) return;
+    if (panel.hidden) {
+      byId("action-preview").replaceChildren();
+      byId("action-preview").hidden = true;
+      return;
+    }
+    showActionPreview(choice, plan);
     const next = plan.next;
     const charged = next.battery - state.battery;
     const batteryChange = charged > 0 ? t("Cargás +", "Charge +") + charged : charged < 0 ? t("Usás −", "Use −") + plan.deficit : t("Sin cambio", "No change");
@@ -318,10 +337,6 @@ function startGame() {
   function showPreview() {
     const choice = selectedChoice();
     byId("advance").disabled = !choice;
-    if (!alertActions.hidden && alertActions.children.length) {
-      alertActions.children[0].setAttribute("aria-pressed", String(choice?.crew === "shelter"));
-      alertActions.children[1].setAttribute("aria-pressed", String(choice?.crew === "maintenance"));
-    }
     if (!choice) {
       showResourcePreview();
       byId("preview").textContent = t("Tocá una opción para ver qué cambiaría.", "Tap a plan to see what would change.");
@@ -330,9 +345,9 @@ function startGame() {
     }
     const plan = planTurn(state, choice);
     byId("advance").disabled = Boolean(plan.error);
-    showResourcePreview(plan);
+    showResourcePreview(plan, choice);
     const text = plan.error
-      ? t("Necesitás {demand} de energía y tenés {available}. Probá otro plan.", "You need {demand} power and have {available}. Try another plan.", plan)
+      ? t("Necesitás {demand} de energía. El Sol y la batería juntos te dan {available}. Probá otro plan.", "You need {demand} power. The Sun and battery together give you {available}. Try another plan.", plan)
       : translate(plan.next.failed) || [
       plan.harvest ? t("¡La lechuga estará lista!", "The lettuce will be ready!") : "",
       days[state.day][3] ? t("Radiación que recibirías: {dose} puntos.", "Radiation you would receive: {dose} points.", plan) : ""
@@ -383,16 +398,27 @@ function startGame() {
     byId("advance").disabled = finished;
     byId("controls").disabled = finished;
 
-    alertActions.hidden = finished || state.day !== 3;
     const eventArt = byId("event-art");
     eventArt.hidden = finished || (state.day !== 2 && state.day !== 3);
     eventArt.replaceChildren();
     if (!eventArt.hidden) {
-      if (state.day === 2) eventArt.append(sprite("dust", 3, 0, true));
-      else eventArt.append(sprite("solar", 3, 0, true), sprite("radio", 5, 0));
+      if (state.day === 2) eventArt.append(sprite("dust", 3, 0, "cycle"));
+      else eventArt.append(sprite("solar", 3, 0, "cycle"), sprite("radio", 5, 0, true));
     }
 
+    const ending = byId("mission-ending");
+    ending.hidden = !finished;
+    form.hidden = finished;
+    byId("operations").textContent = finished
+      ? t("Resultado de la misión", "Mission result")
+      : t("Tu próxima decisión", "Your next decision");
+
     if (finished) {
+      ending.src = state.failed ? "imagenes/mision-interrumpida.png" : "imagenes/mision-cumplida.png";
+      ending.alt = state.failed
+        ? t("La tripulación revisa el plan dentro de la base marciana.", "The crew reviews the plan inside the Mars base.")
+        : t("La tripulación celebra frente a la base marciana.", "The crew celebrates outside the Mars base.");
+      byId("turn-result").hidden = true;
       byId("brief").hidden = true;
       byId("solar").textContent = "";
       choices.replaceChildren();
@@ -410,14 +436,18 @@ function startGame() {
 
     byId("brief").hidden = false;
     const [, title, description, event] = days[state.day];
-    byId("solar").textContent = t(`☀ ${solarAvailable(state)} de energía solar`, `☀ ${solarAvailable(state)} solar power`);
+    const solar = solarAvailable(state);
+    byId("solar").textContent = t(
+      "☀ {solar} del Sol + 🔋 {battery} de batería = {total} de energía disponible",
+      "☀ {solar} from the Sun + 🔋 {battery} from the battery = {total} power available",
+      { solar, battery: state.battery, total: solar + state.battery }
+    );
     byId("event-title").textContent = translate(title);
     byId("event-description").textContent = translate(description);
     const scene = ["landing", "prepare", "dust", "alert", "sun", "finish"][state.day];
     document.querySelector("main").dataset.scene = scene;
     byId("brief").classList.toggle("alert", Boolean(event));
     byId("scene-icon").textContent = ["👩‍🚀", "🛠️", "🌪️", "📡", "🌤️", "🚩"][state.day];
-    renderAlertActions();
     const source = byId("event-source");
     source.hidden = !event;
     if (event) {
@@ -517,11 +547,13 @@ function startGame() {
     byId("turn-result").hidden = false;
     const resultArt = byId("result-art");
     resultArt.replaceChildren();
-    if (choice.crew === "shelter") resultArt.append(sprite("shelter", 5, 0));
+    if (choice.crew === "shield") resultArt.append(shieldAnimation());
+    else if (choice.crew === "shelter") resultArt.append(sprite("shelter", 5, 0, true));
+    else if (choice === carePlans[1]) resultArt.append(sprite("savePower", 5, 0, true));
     else if (choice.crew === "maintenance" && (state.day === 1 || state.day === 3 || state.dust)) {
-      resultArt.append(sprite("panel", 5, 0));
+      resultArt.append(sprite("panel", 5, 0, true));
     }
-    if (plan.harvest) resultArt.append(sprite("lettuce", 5, 4));
+    if (plan.harvest) resultArt.append(sprite("lettuce", 5, 4, true));
     const previous = state;
     state = plan.next;
     render(previous);
