@@ -13,7 +13,7 @@
 body { margin: 0; }
 [hidden] { display: none !important; }
 a { color: var(--accent); text-underline-offset: .22em; }
-button, select, input { font: inherit; }
+button, input { font: inherit; }
 :focus-visible { outline: 3px solid #ffd193; outline-offset: 4px; }
 .top, main { max-width: 1200px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 48px); }
 .top { min-height: 65px; display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: .88rem; }
@@ -29,7 +29,7 @@ h2 { font-size: 1.25rem; }
 .mission-time { display: grid; gap: 6px; padding: 14px 16px; background: #261610e8; border: 1px solid #a56547; border-radius: 10px; }
 .mission-time strong { font-size: 1.25rem; }
 progress { accent-color: var(--accent); width: 100%; }
-.stats { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-block: 14px; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-block: 14px; }
 .stats div { padding: 13px; display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); font-size: .83rem; }
 .stats strong { color: #fff5e9; font-size: 1rem; }
 .symbol { color: var(--accent); font-size: 1.1rem; }
@@ -37,6 +37,7 @@ progress { accent-color: var(--accent); width: 100%; }
 .operations, .report, details { min-width: 0; border: 1px solid var(--line); border-radius: 14px; padding: clamp(14px, 3vw, 24px); background: var(--surface); }
 .section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 #solar { color: var(--accent); font-size: .9rem; font-weight: 650; }
+.last-result { margin-bottom: 12px; color: var(--muted); font-size: .94rem; line-height: 1.45; }
 .brief { border-radius: 8px; border-left: 3px solid #ca7951; padding: 12px; background: #34271f; }
 .brief.alert { border-color: #ffab78; background: #49291e; }
 .brief h3 { font-size: 1rem; }
@@ -44,13 +45,14 @@ progress { accent-color: var(--accent); width: 100%; }
 .brief a { display: inline-block; color: var(--accent); }
 fieldset { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; }
 legend { font-weight: 650; margin-bottom: 10px; padding: 0; }
-.decisions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-label { display: grid; gap: 5px; font-size: .9rem; }
-select { width: 100%; min-height: 40px; border: 1px solid #7b6250; border-radius: 6px; color: inherit; background: #151410; padding: 6px; }
-.battery { display: flex; align-self: end; align-items: center; gap: 8px; min-height: 40px; }
-.battery input { accent-color: var(--accent); width: 18px; height: 18px; }
+.decisions { display: grid; gap: 8px; }
+.decisions label { display: flex; align-items: flex-start; gap: 12px; min-height: 60px; padding: 12px; border: 1px solid #7b6250; border-radius: 9px; background: #151410; cursor: pointer; }
+.decisions label:hover { border-color: var(--accent); }
+.decisions label:has(:checked) { border-color: var(--accent); background: #39271e; }
+.decisions input { flex-shrink: 0; accent-color: var(--accent); width: 20px; height: 20px; margin: 0; }
+.decisions label strong { display: block; margin-bottom: 3px; }
+.decisions label span span { color: var(--muted); line-height: 1.4; }
 .hint, .preview { color: var(--muted); font-size: .88rem; line-height: 1.4; }
-.battery .hint { display: block; }
 .preview { margin-top: 12px; min-height: 1.4em; }
 .warning { color: #ffb194; }
 button { display: inline-flex; align-items: center; gap: 14px; min-height: 43px; padding: 8px 16px; margin-top: 12px; border: 0; border-radius: 7px; background: var(--accent); color: #281506; font-weight: 750; cursor: pointer; }
@@ -63,12 +65,12 @@ details { margin: 14px 0 24px; }
 summary { cursor: pointer; font-weight: 650; }
 
 @media (max-width: 780px) {
-  .stats { grid-template-columns: repeat(3, 1fr); }
   .console { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 430px) {
   .hero { min-height: 255px; }
-  .decisions { grid-template-columns: 1fr; }
+  .stats div { padding: 8px; }
+  .stats strong { font-size: .86rem; }
   .top { font-size: .76rem; }
 }

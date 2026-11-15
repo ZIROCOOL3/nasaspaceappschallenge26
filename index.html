@@ -16,32 +16,28 @@
     <div class="hero-copy">
       <p class="eyebrow">CONTROL DE MISIÓN · MARTE</p>
       <h1 id="title">Base Marte</h1>
-      <p>Mantené a cuatro astronautas a salvo durante seis soles. Cada sol es un día marciano.</p>
+      <p>¡Vos estás al mando! Guiá a cuatro astronautas durante seis soles. Un sol es un día en Marte.</p>
     </div>
     <div class="mission-time"><span>MISIÓN DE SUPERFICIE</span><strong id="day"></strong><progress id="progress" value="0" max="6" aria-label="Soles completados"></progress></div>
   </section>
   <section class="stats" aria-label="Reservas de la base" id="stats"></section>
   <div class="console">
     <section class="operations" aria-labelledby="operations">
-      <div class="section-heading"><h2 id="operations">Panel de mando</h2><span id="solar"></span></div>
+      <div class="section-heading"><h2 id="operations">Tu próxima decisión</h2><span id="solar"></span></div>
+      <p id="last-result" class="last-result" role="status" hidden></p>
       <article class="brief" id="brief"><h3 id="event-title"></h3><p id="event-description"></p><a id="event-source" target="_blank" rel="noopener" hidden>Ver registro en NASA DONKI ↗</a></article>
       <form id="commands">
         <fieldset id="controls">
-          <legend>Decisiones del turno</legend>
-          <div class="decisions">
-            <label><span>Soporte vital</span><select id="water"><option value="full">Reciclaje completo · 6 energía</option><option value="eco">Modo ahorro · 4 energía</option></select></label>
-            <label><span>Invernadero</span><select id="grow"><option value="on">Encender luces · 2 energía</option><option value="off">Pausar luces · 0 energía</option></select></label>
-            <label><span>Tarea de la tripulación</span><select id="crew"><option value="maintenance">Mantenimiento de paneles</option><option value="shield">Reforzar el refugio</option><option value="shelter" disabled>Entrar al refugio</option></select></label>
-            <label class="battery"><input type="checkbox" id="battery"><span>Permitir uso de batería<span class="hint">Solo cubre la energía que falte.</span></span></label>
-          </div>
+          <legend>Elegí un plan</legend>
+          <div class="decisions" id="choices"></div>
         </fieldset>
         <p id="preview" class="preview" role="status"></p>
-        <button id="advance" type="submit">Avanzar un sol <span aria-hidden="true">→</span></button>
+        <button id="advance" type="submit">Hacerlo <span aria-hidden="true">→</span></button>
       </form>
     </section>
     <aside class="report" aria-labelledby="report-title">
-      <h2 id="report-title">Bitácora</h2>
-      <div id="log" role="log" aria-label="Resultados de cada sol"><p class="hint">Acá vas a ver qué pasó después de cada decisión.</p></div>
+      <h2 id="report-title">Lo que pasó</h2>
+      <div id="log" role="log" aria-label="Resultados de cada sol"><p class="hint">Acá vas a ver qué cambió con cada decisión.</p></div>
       <section id="outcome" hidden tabindex="-1"><h3 id="outcome-title"></h3><p id="outcome-detail"></p><button id="restart" type="button">Volver a jugar</button></section>
     </aside>
   </div>
@@ -52,6 +48,7 @@
       <li><a href="https://ccmc.gsfc.nasa.gov/DONKI/view/Alert/30728/1">NASA DONKI · Notificación de partículas solares del 11 de mayo de 2024</a></li>
       <li><a href="https://www.asc-csa.gc.ca/eng/youth-educators/activities/fitness-and-nutrition/interplanetary-farming.asp">CSA · Interplanetary Farming</a>. La lechuga de hoja tarda aproximadamente 21 a 28 días en crecer. La misión empieza con plantas cerca de la cosecha.</li>
       <li><a href="https://science.nasa.gov/resource/on-mars-light-is-energy/">NASA · Energía solar de Opportunity durante la tormenta de polvo</a></li>
+      <li><a href="https://science.nasa.gov/blog/speaking-percys-language-how-to-talk-so-perseverance-will-listen/">NASA · Cómo llegan los mensajes a Marte</a>. La señal tarda entre 3 y 22 minutos por tramo. Para la escena elegimos 10 minutos de ida y 10 de vuelta.</li>
     </ul>
   </details>
 </main>

@@ -6,17 +6,16 @@ const solarEvent = {
 };
 
 const days = [
-  [10, "Llegada a Marte", "Revisá los sistemas. Podés dedicar el turno a mantener los paneles o a reforzar el refugio."],
-  [10, "Preparativos", "Se acerca una tormenta de polvo. Podés limpiar los paneles para mañana o reforzar el refugio para la alerta solar del sol 4."],
-  [6, "Tormenta de polvo", "El polvo bloquea parte de la luz. Decidí qué sistemas mantener con energía solar y qué parte cubrir con la batería."],
-  [5, "Alerta de partículas solares", `NASA DONKI registró un evento el ${solarEvent.date} con ${solarEvent.instrument}. En este escenario podés refugiar a la tripulación o salir a mantener los paneles.`, solarEvent],
-  [8, "Sale el Sol", "El polvo empieza a despejarse. Revisá cuánta agua queda y cuánta luz necesita la lechuga para estar lista."],
-  [10, "Último sol", "Mantené las reservas y a la tripulación a salvo hasta que termine la misión."]
+  [10, "¡Llegamos a Marte!", "Quedan pocos días para cosechar la lechuga. Las plantas crecen con las luces encendidas, pero esas luces gastan energía."],
+  [10, "Se acerca una tormenta", "La tripulación tiene tiempo para una tarea. Podés limpiar los paneles que juntan luz del Sol o ponerle otra capa de protección al refugio."],
+  [6, "¡Polvo por todos lados!", "Hoy llega menos luz a los paneles. ¿Usás la batería para las plantas o guardás esa energía para mañana?"],
+  [5, "¿Entramos o esperamos a la Tierra?", "El Sol lanzó partículas que pueden hacerle daño a la tripulación. Pediste ayuda por radio: el mensaje tarda 10 minutos en llegar a la Tierra y la respuesta tarda otros 10. Tenés que decidir qué hacer mientras tanto.", solarEvent],
+  [8, "Vuelve la luz", "La tormenta de polvo se está yendo. Mirá cuántos días de luz les faltan a las lechugas."],
+  [10, "El último día en Marte", "Revisá cuánta agua y comida te quedan. ¿Qué necesita la base para terminar la misión?"]
 ];
 
 const batteryCapacity = 6;
 const harvestTarget = 4;
-const exposureLimit = 6;
 
 function newMission() {
   return { day: 0, battery: 2, water: 8, food: 10, growth: 0, shield: 1, exposure: 0, dust: 0, failed: "" };
@@ -40,7 +39,7 @@ function planTurn(state, choice) {
   const harvest = growth === harvestTarget && state.growth < harvestTarget;
   const food = state.food + (harvest ? 3 : 0) - 2;
   const activeEvent = days[state.day][3];
-  const dose = activeEvent ? (choice.crew === "shelter" ? Math.max(0, 5 - state.shield * 2) : 6) : 0;
+  const dose = activeEvent ? (choice.crew === "shelter" ? Math.max(0, 5 - state.shield * 2) : 4) : 0;
   const exposure = state.exposure + dose;
   const shield = Math.min(3, state.shield + Number(choice.crew === "shield"));
   const dust = choice.crew === "maintenance" ? 0 : Math.min(2, state.dust + Number(state.day >= 1 && state.day <= 3));
@@ -48,33 +47,58 @@ function planTurn(state, choice) {
   let failed = "";
   if (water < 0) failed = "La reserva de agua no alcanzó para completar el turno.";
   else if (food < 0) failed = "La reserva de alimentos no alcanzó para completar el turno.";
-  else if (exposure >= exposureLimit) failed = "La tripulación alcanzó el límite de exposición del juego.";
 
   return { deficit, harvest, dose, next: { day: nextDay, battery, water, food, growth, shield, exposure, dust, failed } };
+}
+
+const carePlans = [
+  { title: "Cuidar las plantas", description: "Encendé las luces y usá la batería si hace falta.", water: "full", grow: true, crew: "maintenance", battery: true },
+  { title: "Guardar energía", description: "Apagá las luces. La cosecha tendrá que esperar.", water: "full", grow: false, crew: "maintenance", battery: true },
+  { title: "Usar más agua", description: "Reutilizá menos agua para que las plantas tengan luz.", water: "eco", grow: true, crew: "maintenance", battery: false }
+];
+
+const preparationPlans = [
+  { ...carePlans[0], title: "Limpiar los paneles", description: "Mañana juntarán más energía. Hoy también encendés las luces." },
+  { ...carePlans[0], title: "Proteger el refugio", description: "Agregá una capa de protección. El polvo queda en los paneles.", crew: "shield" }
+];
+
+const alertPlans = [
+  { title: "Entrar al refugio ya", description: "Esperá la respuesta adentro. Ahorrá energía usando más agua y pausando las luces.", water: "eco", grow: false, crew: "shelter", battery: true },
+  { title: "Refugiarse y cuidar las plantas", description: "Entrá ya y usá batería para mantener el agua y las luces.", water: "full", grow: true, crew: "shelter", battery: true },
+  { title: "Esperar afuera y limpiar", description: "Mañana tendrás más energía, pero la tripulación queda expuesta mientras espera la respuesta.", water: "eco", grow: false, crew: "maintenance", battery: true }
+];
+
+function plansForDay(day) {
+  if (day === 0) return carePlans.slice(0, 2);
+  if (day === 1) return preparationPlans;
+  if (day === 3) return alertPlans;
+  return carePlans;
 }
 
 function startGame() {
   const byId = (id) => document.getElementById(id);
   const form = byId("commands");
-  const crew = byId("crew");
+  const choices = byId("choices");
   const outcome = byId("outcome");
   let state = newMission();
 
-  function currentPlan() {
-    return planTurn(state, {
-      water: byId("water").value,
-      grow: byId("grow").value === "on",
-      crew: crew.value,
-      battery: byId("battery").checked
-    });
+  function selectedChoice() {
+    return plansForDay(state.day)[choices.querySelector("input:checked")?.value];
   }
 
   function showPreview() {
-    const plan = currentPlan();
+    const choice = selectedChoice();
+    byId("advance").disabled = !choice;
+    if (!choice) {
+      byId("preview").textContent = "Tocá una opción para ver qué cambiaría.";
+      byId("preview").classList.remove("warning");
+      return;
+    }
+    const plan = planTurn(state, choice);
     byId("advance").disabled = Boolean(plan.error);
     const text = plan.error || (plan.next.failed
-      ? `Riesgo de misión. ${plan.next.failed}`
-      : `Después de este turno quedarían ${plan.next.battery} de batería, ${plan.next.water} de agua y ${plan.next.food} porciones.${plan.harvest ? " La lechuga estará lista." : ""}${plan.dose ? ` Exposición +${plan.dose} puntos.` : ""}${plan.next.shield > state.shield ? ` El refugio subiría a nivel ${plan.next.shield}.` : ""}`);
+      ? plan.next.failed
+      : `Te quedarían ${plan.next.battery} de batería, ${plan.next.water} de agua y ${plan.next.food} porciones de comida.${plan.harvest ? " ¡La lechuga estará lista!" : ""}${days[state.day][3] ? ` Radiación recibida: ${plan.dose} puntos.` : ""}`);
     byId("preview").textContent = text;
     byId("preview").classList.toggle("warning", Boolean(plan.error || plan.next?.failed));
   }
@@ -82,14 +106,11 @@ function startGame() {
   function render() {
     const finished = Boolean(state.failed) || state.day === days.length;
     const stats = [
-      ["ϟ", "Batería", `${state.battery} / ${batteryCapacity}`],
-      ["◉", "Agua", Math.max(0, state.water)],
-      ["✦", "Alimentos", `${Math.max(0, state.food)} porciones`],
-      ["♧", "Cosecha", state.growth === harvestTarget ? "Recolectada" : `${state.growth} / ${harvestTarget}`],
-      ["⬡", "Blindaje", `Nivel ${state.shield}`],
-      ["☀", "Exposición", `${state.exposure} / ${exposureLimit}`]
+      ["ϟ", "Energía", `Batería: ${state.battery} de ${batteryCapacity}`, "Los paneles cargan la batería."],
+      ["◉", "Agua y comida", `${Math.max(0, state.water)} de agua · ${Math.max(0, state.food)} porciones`, state.growth === harvestTarget ? "¡Lechuga cosechada!" : `Luz para las plantas: ${state.growth} de ${harvestTarget} días`],
+      ["⬡", "Refugio", `Protección: nivel ${state.shield}`, `Radiación recibida: ${state.exposure} puntos`]
     ];
-    byId("stats").replaceChildren(...stats.map(([icon, label, value]) => {
+    byId("stats").replaceChildren(...stats.map(([icon, label, value, detail]) => {
       const card = document.createElement("div");
       const symbol = document.createElement("span");
       symbol.className = "symbol";
@@ -99,7 +120,9 @@ function startGame() {
       heading.textContent = label;
       const number = document.createElement("strong");
       number.textContent = value;
-      card.append(symbol, heading, number);
+      const note = document.createElement("span");
+      note.textContent = detail;
+      card.append(symbol, heading, number, note);
       return card;
     }));
     byId("day").textContent = finished ? `${state.day} de 6 soles` : `Sol ${state.day + 1} de 6`;
@@ -111,7 +134,11 @@ function startGame() {
     if (finished) {
       byId("preview").textContent = "";
       byId("outcome-title").textContent = state.failed ? "Misión interrumpida" : "Misión cumplida";
-      byId("outcome-detail").textContent = state.failed || "Los cuatro astronautas completaron los seis soles. Revisá en la bitácora cómo influyeron tus decisiones.";
+      byId("outcome-detail").textContent = state.failed
+        ? `${state.failed} Podés volver a jugar y probar otra decisión.`
+        : state.exposure > 3
+          ? "¡Llegaste al último sol! La tripulación recibió mucha radiación por esperar afuera. Probá otra vez y fijate cuánto podés bajar ese número."
+          : `¡Los cuatro astronautas completaron la misión! Recibieron ${state.exposure} puntos de radiación. ¿Qué cambiarías si volvieras a jugar?`;
       outcome.focus();
       return;
     }
@@ -126,11 +153,23 @@ function startGame() {
     if (event) {
       source.href = event.url;
       source.title = event.id;
+      source.textContent = `Evento real · ${event.date} · ${event.instrument} ↗`;
     }
-    crew.options[2].disabled = !event;
-    crew.options[1].disabled = Boolean(event);
-    if (crew.selectedOptions[0].disabled) crew.value = "maintenance";
-    if (event) crew.value = "shelter";
+    choices.replaceChildren(...plansForDay(state.day).map((choice, index) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = "plan";
+      input.value = index;
+      const copy = document.createElement("span");
+      const title = document.createElement("strong");
+      title.textContent = choice.title;
+      const description = document.createElement("span");
+      description.textContent = choice.description;
+      copy.append(title, description);
+      label.append(input, copy);
+      return label;
+    }));
     showPreview();
   }
 
@@ -138,33 +177,46 @@ function startGame() {
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     if (state.failed || state.day >= days.length) return;
-    const plan = currentPlan();
+    const choice = selectedChoice();
+    if (!choice) return;
+    const plan = planTurn(state, choice);
     if (plan.error) return;
     const notes = [];
     if (plan.deficit) notes.push(`Usaste ${plan.deficit} de batería.`);
-    if (byId("water").value === "eco") notes.push("Ahorraste energía y consumiste más agua.");
+    if (choice.water === "eco") notes.push("Ahorraste energía usando más agua.");
     if (plan.harvest) notes.push("La cosecha sumó 3 porciones a las reservas.");
-    else if (byId("grow").value === "off" && state.growth < harvestTarget) notes.push("Pausaste las luces y la cosecha quedó pendiente.");
-    if (crew.value === "shield") notes.push(plan.next.shield > state.shield ? "Reforzaste el refugio." : "El refugio ya estaba reforzado al máximo.");
-    if (crew.value === "shelter") notes.push(`La tripulación se refugió. Exposición +${plan.dose}; se postergó la limpieza de paneles.`);
-    if (crew.value === "maintenance" && state.dust) notes.push("Limpiaste el polvo de los paneles para el próximo sol.");
+    else if (!choice.grow && state.growth < harvestTarget) notes.push("Hoy las plantas se quedaron sin luz. La cosecha tiene que esperar.");
+    if (choice.crew === "shield") notes.push("Pusiste otra capa de protección en el refugio.");
+    if (days[state.day][3]) {
+      notes.push(choice.crew === "shelter"
+        ? `Esperaste bajo techo. Radiación recibida: ${plan.dose} puntos. Quedó pendiente limpiar los paneles.`
+        : `Limpiaste los paneles mientras esperabas afuera. Radiación recibida: ${plan.dose} puntos.`);
+      notes.push("La Tierra respondió 20 minutos después. Para entonces ya habías actuado.");
+    } else if (choice.crew === "maintenance" && state.dust) {
+      notes.push("Limpiaste el polvo de los paneles para mañana.");
+    }
     const entry = document.createElement("p");
     entry.textContent = `Sol ${plan.next.day} · ${notes.join(" ") || "Los sistemas funcionaron según lo previsto."}`;
     if (state.day === 0) byId("log").replaceChildren();
     byId("log").prepend(entry);
+    byId("last-result").textContent = entry.textContent;
+    byId("last-result").hidden = false;
     state = plan.next;
     render();
+    if (outcome.hidden) choices.querySelector("input").focus();
   });
 
   byId("restart").addEventListener("click", () => {
     state = newMission();
     form.reset();
+    byId("last-result").hidden = true;
+    byId("last-result").textContent = "";
     const intro = document.createElement("p");
     intro.className = "hint";
-    intro.textContent = "Acá vas a ver qué pasó después de cada decisión.";
+    intro.textContent = "Acá vas a ver qué cambió con cada decisión.";
     byId("log").replaceChildren(intro);
     render();
-    byId("water").focus();
+    choices.querySelector("input").focus();
   });
 
   document.querySelector(".top a[href='#fuentes']").addEventListener("click", () => { byId("fuentes").open = true; });
@@ -172,4 +224,4 @@ function startGame() {
 }
 
 if (typeof document !== "undefined") startGame();
-if (typeof module !== "undefined") module.exports = { newMission, planTurn };
+if (typeof module !== "undefined") module.exports = { newMission, planTurn, plansForDay };
