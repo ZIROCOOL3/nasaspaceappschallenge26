@@ -75,12 +75,95 @@ function plansForDay(day) {
   return carePlans;
 }
 
+const sprites = {
+  solar: ["alerta-solar", 6],
+  dust: ["tormenta-polvo", 6],
+  radio: ["senal-radio", 6],
+  shelter: ["entrar-refugio", 6],
+  panel: ["limpiar-panel", 6],
+  lettuce: ["crecer-lechuga", 6],
+  battery: ["bateria-base", 7],
+  water: ["tanque-agua", 9],
+  food: ["raciones", 4]
+};
+
+function sprite(name, frame = 0, from = frame, loop = false) {
+  const [file, frames] = sprites[name];
+  const viewport = document.createElement("span");
+  viewport.className = "sprite";
+  viewport.setAttribute("aria-hidden", "true");
+  const strip = document.createElement("img");
+  strip.src = "imagenes/" + file + ".png";
+  strip.alt = "";
+  strip.draggable = false;
+  strip.style.width = frames * 100 + "%";
+  const position = (index) => "translateX(" + (-index * 100 / frames) + "%)";
+  strip.style.transform = position(frame);
+  viewport.append(strip);
+  if ((loop || from !== frame) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const steps = loop ? frames : Math.abs(frame - from);
+    strip.animate(
+      [{ transform: position(from) }, { transform: position(loop ? frames : frame) }],
+      { duration: loop ? 1800 : Math.max(240, steps * 160), easing: "steps(" + steps + ", end)", iterations: loop ? Infinity : 1 }
+    );
+  }
+  return viewport;
+}
+
+function foodFrame(food) {
+  return food <= 0 ? 0 : Math.min(3, Math.ceil(food * 3 / 10));
+}
+
 function startGame() {
   const byId = (id) => document.getElementById(id);
   const form = byId("commands");
   const choices = byId("choices");
   const outcome = byId("outcome");
   let state = newMission();
+  const alertActions = byId("alert-actions");
+
+  function renderAlertActions() {
+    alertActions.replaceChildren();
+    if (state.day !== 3) return;
+    for (const [name, label, planIndex] of [
+      ["shelter", "Tocá el refugio", 0],
+      ["panel", "Deslizá o tocá el panel", 2]
+    ]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "object-action";
+      const caption = document.createElement("span");
+      caption.textContent = label;
+      button.append(sprite(name), caption);
+      const select = () => {
+        const input = choices.querySelector('input[value="' + planIndex + '"]');
+        input.checked = true;
+        showPreview();
+      };
+      button.addEventListener("click", select);
+      if (name === "panel") {
+        let start = null;
+        let pointer = null;
+        button.addEventListener("pointerdown", (event) => {
+          if (!event.isPrimary || event.button !== 0) return;
+          start = event.clientX;
+          pointer = event.pointerId;
+          button.setPointerCapture(pointer);
+        });
+        button.addEventListener("pointermove", (event) => {
+          if (pointer !== event.pointerId || start === null || Math.abs(event.clientX - start) < 30) return;
+          start = null;
+          button.querySelector(".sprite").replaceWith(sprite("panel", 3, 0));
+          select();
+        });
+        const clear = () => { start = null; pointer = null; };
+        button.addEventListener("pointerup", clear);
+        button.addEventListener("pointercancel", clear);
+        button.addEventListener("lostpointercapture", clear);
+      }
+      alertActions.append(button);
+    }
+  }
 
   function selectedChoice() {
     return plansForDay(state.day)[choices.querySelector("input:checked")?.value];
@@ -89,6 +172,10 @@ function startGame() {
   function showPreview() {
     const choice = selectedChoice();
     byId("advance").disabled = !choice;
+    if (!alertActions.hidden && alertActions.children.length) {
+      alertActions.children[0].setAttribute("aria-pressed", String(choice?.crew === "shelter"));
+      alertActions.children[1].setAttribute("aria-pressed", String(choice?.crew === "maintenance"));
+    }
     if (!choice) {
       byId("preview").textContent = "Tocá una opción para ver qué cambiaría.";
       byId("preview").classList.remove("warning");
@@ -103,7 +190,7 @@ function startGame() {
     byId("preview").classList.toggle("warning", Boolean(plan.error || plan.next?.failed));
   }
 
-  function render() {
+  function render(previous = state) {
     const finished = Boolean(state.failed) || state.day === days.length;
     const stats = [
       ["🔋", "Energía", `Batería: ${state.battery} de ${batteryCapacity}`, "Los paneles cargan la batería."],
@@ -122,7 +209,21 @@ function startGame() {
       number.textContent = value;
       const note = document.createElement("span");
       note.textContent = detail;
-      card.append(symbol, heading, number, note);
+      const art = document.createElement("span");
+      art.className = "resource-art";
+      if (label === "Energía") {
+        art.append(sprite("battery", state.battery, previous.battery));
+      } else if (label === "Agua y comida") {
+        const growthFrame = (growth) => growth === harvestTarget ? 5 : growth;
+        art.append(
+          sprite("water", Math.max(0, state.water), Math.max(0, previous.water)),
+          sprite("food", foodFrame(state.food), foodFrame(previous.food)),
+          sprite("lettuce", growthFrame(state.growth), growthFrame(previous.growth))
+        );
+      } else {
+        art.append(symbol);
+      }
+      card.append(art, heading, number, note);
       return card;
     }));
     byId("day").textContent = finished ? `${state.day} de 6 soles` : `Sol ${state.day + 1} de 6`;
@@ -130,6 +231,15 @@ function startGame() {
     outcome.hidden = !finished;
     byId("advance").disabled = finished;
     byId("controls").disabled = finished;
+
+    alertActions.hidden = finished || state.day !== 3;
+    const eventArt = byId("event-art");
+    eventArt.hidden = finished || (state.day !== 2 && state.day !== 3);
+    eventArt.replaceChildren();
+    if (!eventArt.hidden) {
+      if (state.day === 2) eventArt.append(sprite("dust", 3, 0, true));
+      else eventArt.append(sprite("solar", 3, 0, true), sprite("radio", 5, 0));
+    }
 
     if (finished) {
       byId("preview").textContent = "";
@@ -151,6 +261,7 @@ function startGame() {
     document.querySelector("main").dataset.scene = scene;
     byId("brief").classList.toggle("alert", Boolean(event));
     byId("scene-icon").textContent = ["👩‍🚀", "🛠️", "🌪️", "📡", "🌤️", "🚩"][state.day];
+    renderAlertActions();
     const source = byId("event-source");
     source.hidden = !event;
     if (event) {
@@ -213,16 +324,25 @@ function startGame() {
     if (state.day === 0) byId("log").replaceChildren();
     byId("log").prepend(entry);
     byId("last-result").textContent = entry.textContent;
-    byId("last-result").hidden = false;
+    byId("turn-result").hidden = false;
+    const resultArt = byId("result-art");
+    resultArt.replaceChildren();
+    if (choice.crew === "shelter") resultArt.append(sprite("shelter", 5, 0));
+    else if (choice.crew === "maintenance" && (state.day === 1 || state.day === 3 || state.dust)) {
+      resultArt.append(sprite("panel", 5, 0));
+    }
+    if (plan.harvest) resultArt.append(sprite("lettuce", 5, 4));
+    const previous = state;
     state = plan.next;
-    render();
+    render(previous);
     if (outcome.hidden) choices.querySelector("input").focus();
   });
 
   byId("restart").addEventListener("click", () => {
     state = newMission();
     form.reset();
-    byId("last-result").hidden = true;
+    byId("turn-result").hidden = true;
+    byId("result-art").replaceChildren();
     byId("last-result").textContent = "";
     const intro = document.createElement("p");
     intro.className = "hint";

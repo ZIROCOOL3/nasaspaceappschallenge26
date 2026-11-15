@@ -171,3 +171,18 @@ button:not(:disabled):active { transform: translateY(3px); box-shadow: 0 1px #bc
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .decisions label:hover, button:not(:disabled):active { transform: none; }
 }
+
+.sprite { display: inline-block; position: relative; overflow: hidden; width: 58px; max-width: 100%; aspect-ratio: 1; vertical-align: middle; flex-shrink: 0; }
+.sprite img { position: absolute; inset: 0 auto auto 0; height: 100%; max-width: none; user-select: none; pointer-events: none; }
+.resource-art { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 46px; }
+.resource-art .sprite { width: clamp(30px, 6vw, 58px); }
+.event-art { display: flex; gap: 12px; margin-block: 5px; }
+.event-art .sprite { width: clamp(64px, 14vw, 112px); }
+.turn-result { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.turn-result .last-result { margin: 0; }
+#result-art:empty { display: none; }
+#result-art { display: flex; flex-wrap: wrap; flex-shrink: 0; }
+.alert-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 4px 0 14px; }
+.object-action { display: grid; justify-items: center; gap: 4px; margin: 0; min-width: 0; color: #fff5e5; background: #303b63; border: 2px solid #8298cf; box-shadow: none; touch-action: pan-y; }
+.object-action[aria-pressed="true"] { border-color: #ffd27a; background: #424e76; }
+.object-action .sprite { width: clamp(64px, 16vw, 112px); }
